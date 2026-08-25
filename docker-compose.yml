@@ -1,0 +1,59 @@
+x-app-environment: &app-environment
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_HTTPS: ${DJANGO_HTTPS:-0}
+  DJANGO_API_DOCS: ${DJANGO_API_DOCS:-0}
+  NINJA_NUM_PROXIES: ${NINJA_NUM_PROXIES:-0}
+  POSTGRES_DB: ${POSTGRES_DB:-blog}
+  POSTGRES_USER: ${POSTGRES_USER:-blog}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-app-security: &app-security
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  db:
+    image: cgr.dev/chainguard/postgres:latest@sha256:41a02d9c35a8dc6cac36188a0a201528ea8d686bb238af595867252821f609b9
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-blog}
+      POSTGRES_USER: ${POSTGRES_USER:-blog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-blog} -d ${POSTGRES_DB:-blog}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["manage.py", "migrate", "--noinput"]
+    environment: *app-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    <<: *app-security
+
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    <<: *app-security
+
+volumes:
+  postgres_data:

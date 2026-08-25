@@ -1,0 +1,10 @@
+.git
+.env
+.venv
+__pycache__
+*.pyc
+*.sqlite3
+blog/tests
+security
+.env.example
+README.md
