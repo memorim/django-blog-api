@@ -1,4 +1,4 @@
-# Blog API
+# Blog API — backend блога на Django
 
 Тестовый backend блога на Django и Django Ninja. При `DJANGO_API_DOCS=1` API-документация доступна по адресу `http://localhost:8000/api/docs`; в production её следует отключить.
 
