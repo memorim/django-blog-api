@@ -17,13 +17,13 @@
 Python, Django, Django Ninja, PostgreSQL/SQLite, Docker.
 
 ## Запуск и проверка
-Python 3.12. Для PostgreSQL-варианта — Docker или доступная PostgreSQL.
+Python 3.12.14.
 
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # Linux/macOS: source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -c requirements-lock.txt -r requirements.txt
 python manage.py migrate
 python manage.py test
 python manage.py runserver
@@ -42,3 +42,9 @@ python manage.py runserver
 [API, конфигурация и исходные инструкции](docs/TECHNICAL.md).
 
 [Результаты проверки этой версии](docs/VERIFICATION.md).
+
+## Проверка документации и обновлений
+
+`python .github/scripts/check_docs.py` проверяет ссылки на файлы и изображения в Markdown, регистр имён и случайные локальные ссылки. Примеры команд внутри блоков кода не проверяются как ссылки. `--external` дополнительно проверяет публичные HTTP-ссылки: 404/410 считаются ошибками; авторизация, сетевые сбои и ограничения сервиса отмечаются как непроверенные. HTTP-проверка запускается еженедельно и вручную; локальные ссылки — при каждом push/PR. Фрагменты внутри страниц не проверяются.
+
+Dependabot еженедельно предлагает сгруппированные обновления зависимостей и GitHub Actions. Автоматического слияния нет; обновления проходят CI. [История версии](CHANGELOG.md).
