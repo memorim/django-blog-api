@@ -1,23 +1,27 @@
-# Blog API — backend блога на Django
+# Django Blog API
 
-Предоставляет API пользователей, статей и комментариев.
+Provide users, articles and comments through an ownership-aware REST API.
 
-**Проект:** Самостоятельная разработка.
 
-![CI](https://github.com/memorim/django-blog-api/actions/workflows/ci.yml/badge.svg)
+## Implemented
 
-[Пример реального локального запроса и ответа](docs/API_EXAMPLE.md)
+- Registration, login/logout and CRUD for articles and comments.
+- Hashed expiring API tokens, rotation, ownership checks and audit records.
+- ETag/If-Match support, pagination and Django admin.
 
-## Что работает
-- Регистрация, вход и выход; статьи и комментарии с проверкой владельца.
-- Хранение хеша API-токена, срок действия, ротация и аудит операций.
-- ETag/If-Match для защиты от устаревшего изменения, админ-панель.
+## Stack and architecture
 
-## Стек
-Python, Django, Django Ninja, PostgreSQL/SQLite, Docker.
+Python, Django, Django Ninja and SQLite/PostgreSQL.
 
-## Запуск и проверка
-Python 3.12.14.
+## Technical mechanisms and security
+
+- `blog/api.py` validates input and checks ownership on mutations. Tokens are stored as hashes, not reusable plaintext credentials.
+- Transactional writes use row locking where supported. PostgreSQL and local SQLite are configured separately.
+- Existing migrations and an immutable previous-version upgrade fixture check persistence across upgrades.
+
+## Local setup
+
+Python 3.12.14 (see `.python-version`). Activate the virtual environment before the remaining commands.
 
 ```bash
 python -m venv .venv
@@ -25,20 +29,37 @@ python -m venv .venv
 # Linux/macOS: source .venv/bin/activate
 python -m pip install -c requirements-lock.txt -r requirements.txt
 python manage.py migrate
-python manage.py test
-python manage.py runserver
+python manage.py runserver 127.0.0.1:8000
 ```
 
-## Технические решения
-- SQLite используется для локального запуска, PostgreSQL предусмотрен контейнерной конфигурацией.
-- В development статика не требует production-манифеста; production использует WhiteNoise.
+## Configuration
 
-## Подробности
-[API, конфигурация и исходные инструкции](docs/TECHNICAL.md).
+Use [.env.example](.env.example) for supported configuration and keep secrets outside Git. See [configuration details](docs/TECHNICAL.md) for loading settings and optional services.
 
-[Результаты проверки этой версии](docs/VERIFICATION.md).
+## Database and upgrades
 
-## Проверки и обновления
-CI проверяет проект и ссылки на локальные материалы. Dependabot предлагает обновления зависимостей и Actions. [История изменений](CHANGELOG.md).
+Run the migration command above before serving requests. Existing records are retained; tests check upgrading an immutable earlier version.
 
-[Контракты API и обновление базы](docs/COMPATIBILITY.md): `python tests/check_contract.py && python tests/check_upgrade.py`.
+## Verification
+
+```bash
+python manage.py test
+python tests/check_contract.py
+python tests/check_upgrade.py
+python -m pip check
+```
+
+Existing Django tests exercise tokens, ownership, validation and conditional updates. OpenAPI and previous-version migration checks remain enabled.
+
+CI installs locked dependencies and runs the configured checks; documentation checks also validate local links/images. Python dependency auditing uses `pip-audit --disable-pip --no-deps --strict -r requirements-lock.txt`. A passing scanner only reports known advisories at the time of the run.
+
+## Limits and next steps
+
+- If-Match is optional: clients that omit it do not obtain optimistic conflict detection. SQLite does not implement PostgreSQL row-level select_for_update semantics.
+- Rate limits are per-process. A public deployment needs HTTPS, deployment-specific origins/hosts, secret configuration and shared limits where appropriate.
+
+## Further documentation
+
+[Audit findings and follow-up](docs/AUDIT_2026_10.md) · [Technical reference](docs/TECHNICAL.md) · [Change history](CHANGELOG.md)
+
+[API request/response example](docs/API_EXAMPLE.md)
