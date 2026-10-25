@@ -18,9 +18,8 @@ class AdversarialBlogApiTests(TestCase):
         cls.admin = user_model.objects.create_superuser(username="attack-admin", password=cls.password)
         cls.owner_token = issue_token(cls.owner)
         cls.other_token = issue_token(cls.other)
-        cls.category = Category.objects.create(id=1, name="Adversarial", slug="adversarial")
+        cls.category = Category.objects.create( name="Adversarial", slug="adversarial")
         cls.article = Article.objects.create(
-            id=1,
             author=cls.owner,
             category=cls.category,
             title="Original title",
