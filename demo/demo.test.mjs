@@ -42,7 +42,10 @@ function browser() {
         ...(body ? { body: JSON.stringify(body) } : {}),
         headers,
       });
-      return { status: response.status, body: await response.json() };
+      return {
+        status: response.status,
+        body: response.status === 204 ? null : await response.json(),
+      };
     },
     advance: (ms) => {
       offset += ms;
@@ -50,7 +53,7 @@ function browser() {
     network: () => network,
   };
 }
-test("article updates check version and deletion removes comments", async () => {
+test("article updates honor If-Match and deletion removes comments", async () => {
   const b = browser();
   const row = (
     await b.call("/api/articles", "POST", {
@@ -69,15 +72,19 @@ test("article updates check version and deletion removes comments", async () => 
   );
   assert.equal(
     (
-      await b.call("/api/articles/" + row.id, "PUT", {
-        title: "Changed",
-        content: "Text",
-        version: 0,
-      })
+      await b.call(
+        "/api/articles/" + row.id,
+        "PUT",
+        {
+          title: "Changed",
+          content: "Text",
+        },
+        { "If-Match": '"stale"' },
+      )
     ).status,
-    409,
+    412,
   );
-  assert.equal((await b.call("/api/articles/" + row.id, "DELETE")).status, 200);
+  assert.equal((await b.call("/api/articles/" + row.id, "DELETE")).status, 204);
   assert(
     !(await b.call("/api/comments")).body.some((x) => x.article_id === row.id),
   );

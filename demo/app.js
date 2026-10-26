@@ -2,20 +2,28 @@ const events = [];
 function showError(error) {
   document.querySelector("#feedback").textContent = error.message;
 }
-async function call(path, method = "GET", body) {
+async function call(path, method = "GET", body, match = null) {
   const headers = {
     "Content-Type": "application/json",
-    "X-User-Id": document.querySelector("#actor")?.value || "author",
+    ...(match
+      ? { "If-Match": JSON.stringify(match.id + ":" + match.updated_at) }
+      : {}),
   };
   const response = await fetch(path, {
     method,
     headers,
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  const payload = await response.json();
+  const payload = response.status === 204 ? null : await response.json();
   if (method !== "GET") {
     document.querySelector("#request").textContent =
-      method + " " + path + "\n" + JSON.stringify(body || {}, null, 2);
+      method +
+      " " +
+      path +
+      "\n" +
+      JSON.stringify(headers, null, 2) +
+      "\n" +
+      JSON.stringify(body || {}, null, 2);
     document.querySelector("#response").textContent =
       response.status + "\n" + JSON.stringify(payload, null, 2);
     events.unshift({
@@ -74,7 +82,7 @@ async function render() {
         "Удалить",
         async () => {
           if (!confirm("Удалить статью и её комментарии?")) return;
-          await call("/api/articles/" + row.id, "DELETE");
+          await call("/api/articles/" + row.id, "DELETE", null, row);
           await render();
         },
       ],
@@ -125,12 +133,12 @@ document.querySelector("#editor").onsubmit = async (event) => {
     const payload = {
       title: form.elements.title.value,
       content: form.elements.content.value,
-      ...(editing ? { version: editing.version } : {}),
     };
     await call(
       "/api/articles" + (editing ? "/" + editing.id : ""),
       editing ? "PUT" : "POST",
       payload,
+      editing,
     );
     editing = null;
     form.reset();

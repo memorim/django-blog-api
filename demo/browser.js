@@ -44,7 +44,7 @@
     }
   };
   globalThis.PORTFOLIO_DEMO = true;
-  async function handle(url, method, body) {
+  async function handle(url, method, body, headers) {
     const articles = state["/api/articles"],
       comments = state["/api/comments"];
     if (url.pathname === "/api/articles" && method === "GET")
@@ -57,7 +57,9 @@
         title: text(body.title, 1, 200),
         content: text(body.content, 1, 50000),
         author_id: 1,
-        version: 1,
+        category_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
       if (articles.length >= 30) fail("До 30 статей на сессию");
       articles.unshift(row);
@@ -67,21 +69,26 @@
     if (match) {
       const index = articles.findIndex((x) => x.id === Number(match[1]));
       if (index < 0) fail("Не найдено", 404);
+      const expected = JSON.stringify(
+        articles[index].id + ":" + articles[index].updated_at,
+      );
+      if (headers.has("If-Match") && headers.get("If-Match") !== expected)
+        fail("Статья была изменена другим запросом", 412);
       if (method === "DELETE") {
         articles.splice(index, 1);
         state["/api/comments"] = comments.filter(
           (x) => x.article_id !== Number(match[1]),
         );
-        return json({ deleted: true });
+        return new Response(null, { status: 204 });
       }
       if (method === "PUT") {
-        if (body.version !== articles[index].version)
-          fail("Статья уже изменена", 409);
         articles[index] = {
           ...articles[index],
           title: text(body.title, 1, 200),
           content: text(body.content, 1, 50000),
-          version: articles[index].version + 1,
+          updated_at: new Date(
+            Math.max(Date.now(), Date.parse(articles[index].updated_at) + 1),
+          ).toISOString(),
         };
         return json(articles[index]);
       }
