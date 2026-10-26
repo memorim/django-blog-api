@@ -1,27 +1,28 @@
-# Django Blog API
+# Django Blog API — публикации и комментарии
 
-Provide users, articles and comments through an ownership-aware REST API.
+REST API пользователей, статей и комментариев с проверкой владельца при изменениях.
 
 
-## Implemented
 
-- Registration, login/logout and CRUD for articles and comments.
-- Hashed expiring API tokens, rotation, ownership checks and audit records.
-- ETag/If-Match support, pagination and Django admin.
+## Возможности
 
-## Stack and architecture
+- Регистрация, вход, выход и CRUD статей и комментариев.
+- Хешированные токены со сроком действия, ротация и журнал действий.
+- ETag/If-Match, постраничная выдача и Django Admin.
 
-Python, Django, Django Ninja and SQLite/PostgreSQL.
+## Стек и устройство
 
-## Technical mechanisms and security
+Python, Django, Django Ninja, SQLite и PostgreSQL.
 
-- `blog/api.py` validates input and checks ownership on mutations. Tokens are stored as hashes, not reusable plaintext credentials.
-- Transactional writes use row locking where supported. PostgreSQL and local SQLite are configured separately.
-- Existing migrations and an immutable previous-version upgrade fixture check persistence across upgrades.
+## Ключевые решения
 
-## Local setup
+- `blog/api.py` проверяет входные поля и владельца записи. Токены хранятся как хеши.
+- Записи выполняются транзакционно; PostgreSQL использует блокировку строк. Настройки SQLite и PostgreSQL разделены.
+- Миграции и зафиксированная предыдущая версия схемы проверяют сохранность данных при обновлении.
 
-Python 3.12.14 (see `.python-version`). Activate the virtual environment before the remaining commands.
+## Локальный запуск
+
+Python 3.12.14, как в `.python-version`. Перед установкой зависимостей активируйте виртуальное окружение.
 
 ```bash
 python -m venv .venv
@@ -32,15 +33,17 @@ python manage.py migrate
 python manage.py runserver 127.0.0.1:8000
 ```
 
-## Configuration
+Команда запуска привязывает API к локальному адресу 127.0.0.1.
 
-Use [.env.example](.env.example) for supported configuration and keep secrets outside Git. See [configuration details](docs/TECHNICAL.md) for loading settings and optional services.
+## Настройки
 
-## Database and upgrades
+Доступные параметры перечислены в [.env.example](.env.example). Секреты храните вне Git. Порядок загрузки настроек и необязательные службы описаны в [технической документации](docs/TECHNICAL.md).
 
-Run the migration command above before serving requests. Existing records are retained; tests check upgrading an immutable earlier version.
+## Данные и обновления
 
-## Verification
+Выполните команду миграции из инструкции перед запуском API. Существующие записи сохраняются; тесты проверяют обновление зафиксированной предыдущей версии.
+
+## Проверки
 
 ```bash
 python manage.py test
@@ -49,21 +52,15 @@ python tests/check_upgrade.py
 python -m pip check
 ```
 
-Existing Django tests exercise tokens, ownership, validation and conditional updates. OpenAPI and previous-version migration checks remain enabled.
+Тесты Django проверяют токены, владение, валидацию и условные изменения; дополнительно проверяются OpenAPI и миграции. CI PostgreSQL 16 выполняет конкурирующие PUT/PUT и PUT/DELETE на независимых соединениях.
 
-CI installs locked dependencies and runs the configured checks; documentation checks also validate local links/images. Python dependency auditing uses `pip-audit --disable-pip --no-deps --strict -r requirements-lock.txt`. A passing scanner only reports known advisories at the time of the run.
+CI устанавливает зависимости по зафиксированным версиям и запускает настроенные проверки. Отдельная проверка документации находит неверные локальные ссылки и изображения. Проверка уязвимостей учитывает известные проблемы на момент запуска.
 
-## Limits and next steps
+## Ограничения
 
-- If-Match is optional: clients that omit it do not obtain optimistic conflict detection. SQLite does not implement PostgreSQL row-level select_for_update semantics.
-- Rate limits are per-process. A public deployment needs HTTPS, deployment-specific origins/hosts, secret configuration and shared limits where appropriate.
+- If-Match оставлен необязательным для совместимости: запрос без него не получает защиты от устаревшей версии. SQLite не реализует блокировки строк PostgreSQL.
+- Ограничения частоты действуют внутри процесса. Публичному размещению нужны HTTPS, корректные hosts/origins, секреты и при необходимости общие лимиты.
 
-## Further documentation
+## Документация
 
-[Audit findings and follow-up](docs/AUDIT_2026_10.md) · [Technical reference](docs/TECHNICAL.md) · [Change history](CHANGELOG.md)
-
-[API request/response example](docs/API_EXAMPLE.md)
-
-## PostgreSQL verification
-
-See [PostgreSQL concurrency checks](docs/POSTGRES_CONCURRENCY.md) for isolated test setup, CI and the exact concurrency guarantees.
+[Результаты аудита](docs/AUDIT_2026_10.md) · [Техническая документация](docs/TECHNICAL.md) · [Пример запроса и ответа](docs/API_EXAMPLE.md) · [Конкурентные проверки PostgreSQL](docs/POSTGRES_CONCURRENCY.md) · [История изменений](CHANGELOG.md)
