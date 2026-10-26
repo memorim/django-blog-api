@@ -8,3 +8,4 @@ __pycache__/
 staticfiles/
 .local-server.pid
 .local-server.*.log
+_site/
