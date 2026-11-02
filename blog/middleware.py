@@ -1,7 +1,7 @@
 import hashlib
 import logging
 
-from django.core.cache import cache
+from .throttling import consume_budget
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 
@@ -31,20 +31,16 @@ class RequestLoggingMiddleware:
             username = get_user_model().normalize_username(raw_username.strip())
             identity = f"{request.META.get('REMOTE_ADDR', '')}\0{username}"
             login_key = f"admin_login_{hashlib.sha256(identity.encode()).hexdigest()}"
-            if cache.get(login_key, 0) >= ADMIN_LOGIN_LIMIT:
+            allowed, retry_after = consume_budget(login_key, ADMIN_LOGIN_LIMIT, ADMIN_LOGIN_WINDOW)
+            if not allowed:
                 logger.warning("auth action=admin_login_throttled")
-                return HttpResponse("Too many login attempts", status=429)
+                return HttpResponse("Too many login attempts", status=429, headers={"Retry-After": str(int(retry_after))})
 
         response = self.get_response(request)
 
-        if login_key:
-            if response.status_code in (301, 302, 303):
-                cache.delete(login_key)
-            elif not cache.add(login_key, 1, ADMIN_LOGIN_WINDOW):
-                try:
-                    cache.incr(login_key)
-                except ValueError:
-                    cache.set(login_key, 1, ADMIN_LOGIN_WINDOW)
+        if login_key and response.status_code in (301, 302, 303):
+            from .models import RequestBudget
+            RequestBudget.objects.filter(key=hashlib.sha256(login_key.encode()).hexdigest()).delete()
 
         level = logging.ERROR if response.status_code >= 500 else logging.WARNING if response.status_code >= 400 else logging.INFO
         logger.log(

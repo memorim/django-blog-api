@@ -78,3 +78,9 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.content[:50]
+
+
+class RequestBudget(models.Model):
+    key = models.CharField(max_length=64, primary_key=True)
+    count = models.PositiveIntegerField()
+    reset_at = models.FloatField(db_index=True)

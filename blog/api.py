@@ -13,7 +13,7 @@ from django.utils.http import parse_etags, quote_etag
 from ninja import NinjaAPI, Schema
 from ninja.errors import HttpError
 from ninja.security import APIKeyHeader
-from ninja.throttling import AnonRateThrottle, AuthRateThrottle
+from .throttling import DatabaseThrottle
 from pydantic import AfterValidator, ConfigDict, Field, StrictInt
 
 from .models import ApiToken, Article, Category, Comment, hash_token, issue_token
@@ -97,9 +97,9 @@ class HeaderTokenAuth(APIKeyHeader):
 
 
 token_auth = HeaderTokenAuth()
-login_throttle = AnonRateThrottle("5/m")
-register_throttle = AnonRateThrottle("5/m")
-write_throttle = AuthRateThrottle("60/m")
+login_throttle = DatabaseThrottle("login", 5)
+register_throttle = DatabaseThrottle("register", 5)
+write_throttle = DatabaseThrottle("write", 60)
 api = NinjaAPI(
     title="Blog API",
     version="1.0",
