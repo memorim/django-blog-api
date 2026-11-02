@@ -42,6 +42,7 @@ class BlogApiTests(TestCase):
             data=json.dumps(payload),
             content_type="application/json",
             HTTP_X_API_TOKEN=token,
+            HTTP_IF_MATCH=self.client.get(path).headers.get("ETag", ""),
         )
 
     def test_register_success(self):
@@ -140,7 +141,8 @@ class BlogApiTests(TestCase):
 
     def test_article_delete_success(self):
         response = self.client.delete(
-            f"/api/articles/{self.article.id}", HTTP_X_API_TOKEN=self.owner_token
+            f"/api/articles/{self.article.id}", HTTP_X_API_TOKEN=self.owner_token,
+            HTTP_IF_MATCH=self.client.get(f"/api/articles/{self.article.id}").headers["ETag"]
         )
 
         self.assertEqual(response.status_code, 204)

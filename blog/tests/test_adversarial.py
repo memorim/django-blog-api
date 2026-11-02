@@ -121,6 +121,7 @@ class AdversarialBlogApiTests(TestCase):
         response = self.client.delete(
             f"/api/articles/{self.article.id}",
             HTTP_X_API_TOKEN=self.owner_token,
+            HTTP_IF_MATCH=self.client.get(f"/api/articles/{self.article.id}").headers["ETag"],
         )
 
         self.assertEqual(response.status_code, 409)
@@ -132,6 +133,7 @@ class AdversarialBlogApiTests(TestCase):
             f"/api/articles/{self.article.id}",
             {"title": "Newer", "content": "Newer version", "category_id": None},
             self.owner_token,
+            HTTP_IF_MATCH=self.client.get(f"/api/articles/{self.article.id}").headers["ETag"],
         )
         self.assertEqual(first.status_code, 200)
 
@@ -177,3 +179,15 @@ class AdversarialBlogApiTests(TestCase):
             ),
             captured.output,
         )
+
+    def test_unconditional_mutations_cannot_overwrite_or_delete(self):
+        path = f"/api/articles/{self.article.id}"
+        for header, status in [(None, 428), ("", 428), ("*", 412), ('W/"version"', 412), ("invalid", 412)]:
+            headers = {} if header is None else {"HTTP_IF_MATCH": header}
+            with self.subTest(header=header):
+                response = self.put(path, {"title": "Lost update", "content": "Lost"}, self.owner_token, **headers)
+                self.assertEqual(response.status_code, status)
+                response = self.client.delete(path, HTTP_X_API_TOKEN=self.owner_token, **headers)
+                self.assertEqual(response.status_code, status)
+                self.article.refresh_from_db()
+                self.assertEqual(self.article.title, "Original title")

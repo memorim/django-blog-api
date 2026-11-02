@@ -128,10 +128,11 @@ def article_etag(article):
 
 def enforce_if_match(request, article):
     supplied = request.headers.get("If-Match")
-    if supplied:
-        etags = parse_etags(supplied)
-        if "*" not in etags and article_etag(article) not in etags:
-            raise HttpError(412, "Статья была изменена другим запросом")
+    if not supplied:
+        raise HttpError(428, "Для изменения или удаления требуется If-Match из GET статьи")
+    etags = parse_etags(supplied)
+    if article_etag(article) not in etags:
+        raise HttpError(412, "Статья была изменена другим запросом; получите актуальный ETag")
 
 
 def paginate(queryset, limit, offset):
