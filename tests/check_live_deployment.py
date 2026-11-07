@@ -91,7 +91,7 @@ if args.write:
     save()
     call("/api/auth/logout", 204, "POST", headers=token)
     call(article_path, 401, "PUT", body, {**token, "If-Match": headers["ETag"]})
-    summary.update(authenticated_crud=True, version_preconditions=True, logout_revocation=True)
+    summary.update(authenticated_writes=True, version_preconditions=True, logout_revocation=True)
 elif state.get("article_id"):
     article, _ = call("/api/articles/" + str(state["article_id"]), 200)
     assert article["title"] == state["expected_title"]
