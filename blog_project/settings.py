@@ -64,6 +64,14 @@ TEMPLATES = [
 ]
 
 if os.getenv("POSTGRES_DB"):
+    postgres_options = {}
+    sslmode = os.getenv("POSTGRES_SSLMODE")
+    if sslmode:
+        if sslmode not in {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}:
+            raise ImproperlyConfigured("Invalid POSTGRES_SSLMODE")
+        postgres_options["sslmode"] = sslmode
+    if os.getenv("POSTGRES_SSLROOTCERT"):
+        postgres_options["sslrootcert"] = os.environ["POSTGRES_SSLROOTCERT"]
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -72,6 +80,7 @@ if os.getenv("POSTGRES_DB"):
             "PASSWORD": os.environ["POSTGRES_PASSWORD"],
             "HOST": os.getenv("POSTGRES_HOST", "db"),
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "OPTIONS": postgres_options,
         }
     }
 elif DEBUG:

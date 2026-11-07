@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: memorim-django-blog-api
+    runtime: python
+    region: frankfurt
+    plan: free
+    branch: main
+    autoDeployTrigger: checksPass
+    buildCommand: pip install -c requirements-lock.txt -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: python manage.py migrate --noinput && python manage.py check --deploy --fail-level WARNING && gunicorn blog_project.wsgi:application --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: DJANGO_DEBUG
+        value: '0'
+      - key: DJANGO_HTTPS
+        value: '1'
+      - key: DJANGO_API_DOCS
+        value: '0'
+      - key: DJANGO_TRUST_HTTPS_PROXY
+        value: '1'
+      - key: DJANGO_ALLOWED_HOSTS
+        value: memorim-django-blog-api.onrender.com
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: https://memorim-django-blog-api.onrender.com
+      - key: NINJA_NUM_PROXIES
+        value: '1'
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: POSTGRES_DB
+        sync: false
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: '5432'
+      - key: POSTGRES_SSLMODE
+        value: verify-full
+      - key: POSTGRES_SSLROOTCERT
+        value: /etc/ssl/certs/ca-certificates.crt

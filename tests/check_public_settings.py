@@ -62,12 +62,19 @@ response = Client(HTTP_HOST='blog.example.test').get('/api/docs', HTTP_X_FORWARD
 assert response.status_code == 404
 assert 'Strict-Transport-Security' in response
 ''', {'DJANGO_TRUST_HTTPS_PROXY': '1'})
+run(CHECK + '''
+from django.conf import settings
+assert settings.DATABASES['default']['OPTIONS'] == {
+    'sslmode': 'verify-full', 'sslrootcert': '/etc/ssl/certs/ca-certificates.crt'
+}
+''', {'POSTGRES_SSLMODE': 'verify-full', 'POSTGRES_SSLROOTCERT': '/etc/ssl/certs/ca-certificates.crt'})
 for invalid in [
     {'DJANGO_SECRET_KEY': ''},
     {'DJANGO_SECRET_KEY': 'short'},
     {'DJANGO_ALLOWED_HOSTS': '*'},
     {'POSTGRES_DB': ''},
     {'DJANGO_HTTPS': '0'},
+    {'POSTGRES_SSLMODE': 'unsafe-typo'},
 ]:
     run(CHECK, invalid, success=False)
 print('Production settings: HTTPS redirect, HSTS, host boundary, proxy trust and fail-closed checks passed')
