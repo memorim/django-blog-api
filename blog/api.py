@@ -126,10 +126,17 @@ def article_etag(article):
     return quote_etag(f"{article.pk}:{article.updated_at.isoformat()}")
 
 
+def article_version_headers(response, article):
+    marker = article_etag(article)
+    response["ETag"] = marker
+    response["X-Resource-Version"] = marker
+    response["Cache-Control"] = "private, no-store, no-transform"
+
+
 def enforce_if_match(request, article):
     supplied = request.headers.get("If-Match")
     if not supplied:
-        raise HttpError(428, "Для изменения или удаления требуется If-Match из GET статьи")
+        raise HttpError(428, "Требуется If-Match из X-Resource-Version (или сильного ETag) GET статьи")
     etags = parse_etags(supplied)
     if article_etag(article) not in etags:
         raise HttpError(412, "Статья была изменена другим запросом; получите актуальный ETag")
@@ -190,14 +197,14 @@ def create_article(request, payload: ArticleIn, response: HttpResponse):
         title=payload.title,
         content=payload.content,
     )
-    response["ETag"] = article_etag(article)
+    article_version_headers(response, article)
     return 201, article
 
 
 @api.get("/articles/{article_id}", response=ArticleOut)
 def get_article(request, article_id: int, response: HttpResponse):
     article = get_object_or_404(Article, pk=article_id)
-    response["ETag"] = article_etag(article)
+    article_version_headers(response, article)
     return article
 
 
@@ -212,7 +219,7 @@ def update_article(request, article_id: int, payload: ArticleIn, response: HttpR
     article.title = payload.title
     article.content = payload.content
     article.save()
-    response["ETag"] = article_etag(article)
+    article_version_headers(response, article)
     return article
 
 

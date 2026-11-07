@@ -5,7 +5,7 @@ services:
     region: frankfurt
     plan: free
     branch: main
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: commit
     buildCommand: pip install -c requirements-lock.txt -r requirements.txt && python manage.py collectstatic --noinput
     startCommand: python manage.py migrate --noinput && python manage.py check --deploy --fail-level WARNING && gunicorn blog_project.wsgi:application --bind 0.0.0.0:$PORT --workers 2
     envVars:

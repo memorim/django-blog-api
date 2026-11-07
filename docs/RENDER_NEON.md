@@ -26,3 +26,6 @@ production-setting tests do not substitute for those public deployment checks.
 Neon Free currently offers a six-hour instant-restore window; it does not include
 scheduled snapshot backups. Decide an independent backup policy before using
 this deployment for data that needs longer recovery retention.
+
+The deployed API is https://memorim-django-blog-api.onrender.com/api/articles.
+Run `SMOKE_URL=https://memorim-django-blog-api.onrender.com SMOKE_STATE_FILE=/private/probe.json python tests/check_live_deployment.py --write` for the explicit synthetic write scenario. Keep the state file outside Git; it contains a synthetic test password. Omit --write to verify its record after a restart.

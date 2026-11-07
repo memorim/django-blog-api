@@ -1,8 +1,9 @@
 import json
 
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.core.cache import cache
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 
 from blog.models import Article, Category, Comment, issue_token
 
@@ -160,6 +161,26 @@ class AdversarialBlogApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("ETag", response.headers)
+
+    @override_settings(MIDDLEWARE=["django.middleware.gzip.GZipMiddleware", *settings.MIDDLEWARE])
+    def test_canonical_version_survives_compression_without_accepting_weak_if_match(self):
+        self.article.content = "Compression fixture. " * 400
+        self.article.save()
+        path = f"/api/articles/{self.article.id}"
+        detail = self.client.get(path, HTTP_ACCEPT_ENCODING="gzip")
+        self.assertEqual(detail.headers["Content-Encoding"], "gzip")
+        self.assertTrue(detail.headers["ETag"].startswith("W/"))
+        marker = detail.headers["X-Resource-Version"]
+        self.assertFalse(marker.startswith("W/"))
+        self.assertIn("no-transform", detail.headers["Cache-Control"])
+        body = {"title": "Updated through compressed response", "content": "Current", "category_id": None}
+        weak = self.put(path, body, self.owner_token, HTTP_IF_MATCH=detail.headers["ETag"])
+        self.assertEqual(weak.status_code, 412)
+        updated = self.put(path, body, self.owner_token, HTTP_IF_MATCH=marker)
+        self.assertEqual(updated.status_code, 200)
+        self.assertNotEqual(updated.headers["X-Resource-Version"], marker)
+        stale = self.put(path, body, self.owner_token, HTTP_IF_MATCH=marker)
+        self.assertEqual(stale.status_code, 412)
 
     def test_article_create_must_emit_a_domain_audit_event(self):
         with self.assertLogs("blog", level="INFO") as captured:
