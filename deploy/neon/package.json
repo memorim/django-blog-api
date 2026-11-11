@@ -1,0 +1,15 @@
+{
+  "name": "django-backup-trigger",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@neon/functions": "0.11.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "fflate": "0.8.2"
+  }
+}

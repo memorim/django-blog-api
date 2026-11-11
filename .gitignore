@@ -9,3 +9,5 @@ staticfiles/
 .local-server.pid
 .local-server.*.log
 _site/
+node_modules/
+.neon-build/
